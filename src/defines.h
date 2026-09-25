@@ -1575,6 +1575,8 @@
 #define CAVE_XTRA       0x0080    /* misc flag */
 
 #define CAVE_MNLT       0x0100    /* Illuminated by monster */
+#define CAVE_SEEN       0x0200    /* seen by player (auto-explore) */
+#define CAVE_NOEXPL     0x0400    /* locked door auto-explore stopped at */
 #define CAVE_UNSAFE     0x2000    /* Might have trap */
 #define CAVE_IN_DETECT  0x4000    /* trap detected area (inner circle only) */
 #define CAVE_TRAP       0x8000
@@ -1753,6 +1755,7 @@
 #define PW_SPELL        0x00000004L     /* Display spell list */
 #define PW_PLAYER       0x00000008L     /* Display character */
 #define PW_STATS        0x00000010L     /* Display stats, resistances */
+#define PW_VISIBLE      0x00000020L     /* Display visible monsters and items */
 /* xxx */
 #define PW_MESSAGE      0x00000040L     /* Display messages */
 #define PW_OVERHEAD     0x00000080L     /* Display overhead view */
@@ -2753,12 +2756,29 @@
 
 
 /*
+ * Statues show their monster's tile in grey: the 16x16 sheet carries grey
+ * copies of the monster rows (0x9D..0xC5) STATUE_ROW_SHIFT rows further down
+ * (built by grey-statues.py).
+ */
+#define STATUE_ROW_FIRST	0x9D
+#define STATUE_ROW_LAST		0xC5
+#define STATUE_ROW_SHIFT	42
+
+#define statue_pict_p(T) \
+	(((T)->tval == TV_STATUE) && ((T)->pval > 0) && use_graphics && \
+	 (r_info[(T)->pval].x_attr >= STATUE_ROW_FIRST) && \
+	 (r_info[(T)->pval].x_attr <= STATUE_ROW_LAST) && \
+	 streq(ANGBAND_GRAF, "new"))
+
+/*
  * Return the "attr" for a given item.
  * Use "flavor" if available.
  * Default to user definitions.
  */
 #define object_attr(T) \
-	((k_info[(T)->k_idx].flavor) ? \
+	(statue_pict_p(T) ? \
+	 (byte)(r_info[(T)->pval].x_attr + STATUE_ROW_SHIFT) : \
+	 (k_info[(T)->k_idx].flavor) ? \
 	 (k_info[k_info[(T)->k_idx].flavor].x_attr) : \
 	 (k_info[(T)->k_idx].x_attr))
 
@@ -2768,7 +2788,9 @@
  * Default to user definitions.
  */
 #define object_char(T) \
-	((k_info[(T)->k_idx].flavor) ? \
+	(statue_pict_p(T) ? \
+	 (r_info[(T)->pval].x_char) : \
+	 (k_info[(T)->k_idx].flavor) ? \
 	 (k_info[k_info[(T)->k_idx].flavor].x_char) : \
 	 (k_info[(T)->k_idx].x_char))
 

@@ -2943,14 +2943,22 @@ static void process_command(void)
 		/* Go up staircase */
 		case '<':
 		{
+#ifdef TRAVEL
+			do_cmd_stairs(TRUE);
+#else
 			do_cmd_go_up();
+#endif
 			break;
 		}
 
 		/* Go down staircase */
 		case '>':
 		{
+#ifdef TRAVEL
+			do_cmd_stairs(FALSE);
+#else
 			do_cmd_go_down();
+#endif
 			break;
 		}
 
@@ -3398,6 +3406,15 @@ static void process_command(void)
 			do_cmd_feeling();
 			break;
 		}
+
+#ifdef TRAVEL
+		/* Auto-explore */
+		case '`':
+		{
+			do_cmd_explore();
+			break;
+		}
+#endif
 
 		/* Show previous message */
 		case KTRL('O'):
@@ -4295,6 +4312,11 @@ static void load_all_pref_files(void)
 		/* Process that file */
 		process_pref_file(buf);
 	}
+
+	/* Re-apply the system user file: savefiles restore their own window
+	 * flags, and user-<sys>.prf should win over those */
+	sprintf(buf, "user-%s.prf", ANGBAND_SYS);
+	process_pref_file(buf);
 
 
 	/* Load an autopick preference file */

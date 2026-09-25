@@ -2285,14 +2285,15 @@ cptr window_flag_desc[32] =
 	"呪文一覧",
 	"キャラクタ情報",
 	"能力値/耐性情報",
+	"見えるモンスター/アイテム",
 #else
 	"Display inven/equip",
 	"Display equip/inven",
 	"Display spell list",
 	"Display character",
 	"Display stats/res",
+	"Display visible monsters/items",
 #endif
-	NULL,
 #ifdef JP
 	"メッセージ",
 	"ダンジョン全体図",

@@ -1781,6 +1781,10 @@ bool save_player(void)
 #endif
 
 
+#ifdef USE_WEB
+	{ extern void web_sync_files(void); web_sync_files(); }
+#endif
+
 	/* Return the result */
 	return (result);
 }

@@ -1166,7 +1166,25 @@ void map_info(int y, int x, byte *ap, char *cp, byte *tap, char *tcp)
 
 #ifdef VARIABLE_PLAYER_GRAPH
 
-		if (!streq(ANGBAND_GRAF, "new"))
+		if (use_graphics && streq(ANGBAND_GRAF, "new") && (a == 0x89) && (c == 0xA0))
+		{
+			/* Adam Bolt's 16x16 race sprites: row 0x89, from col 0xA0 */
+			static const byte race_pict[] =
+			{
+				0xA0, /* Human */
+				0xA1, /* Half-Elf */
+				0xA2, /* Elf */
+				0xA3, /* Hobbit */
+				0xA5, /* Dwarf */
+				0xA6, /* Half-Orc */
+				0xA8, /* Dunadan */
+				0xA9, /* High-Elf */
+				0xAB, /* Barbarian */
+			};
+
+			if (p_ptr->prace < sizeof(race_pict)) c = race_pict[p_ptr->prace];
+		}
+		else if (!streq(ANGBAND_GRAF, "new"))
 		{
 			if (!streq(ANGBAND_SYS,"ibm"))
 			{
@@ -1360,6 +1378,9 @@ void note_spot(int y, int x)
 		/* Require "perma-lite" of the grid */
 		if (!(c_ptr->info & (CAVE_GLOW | CAVE_MNLT))) return;
 	}
+
+	/* Auto-explore -- remember every grid actually seen */
+	c_ptr->info |= CAVE_SEEN;
 
 
 	/* Hack -- memorize objects */
@@ -3639,6 +3660,9 @@ void update_view(void)
 
 	/* None left */
 	temp_n = 0;
+
+	/* The visible monster/item list depends on the view */
+	p_ptr->window |= (PW_VISIBLE);
 }
 
 
@@ -4318,6 +4342,8 @@ void disturb(int stop_search, int unused_flag)
 	{
 		/* Cancel */
 		travel.run = 0;
+		travel.explore = FALSE;
+		travel.stairs = 0;
 
 		/* Calculate torch radius */
 		p_ptr->update |= (PU_TORCH);

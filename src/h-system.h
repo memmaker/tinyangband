@@ -110,7 +110,7 @@
 #include <string.h>
 
 #if !defined(linux) && !defined(__MWERKS__) && !defined(WIN32)
-extern long atol();
+#include <stdlib.h>
 #endif
 
 

@@ -10,6 +10,11 @@
 
 #include "angband.h"
 
+#ifdef USE_WEB
+# undef USE_X11
+# undef USE_GCU
+#endif
+
 
 /*
  * Some machines have a "main()" function in their "main-xxx.c" file,
@@ -548,7 +553,9 @@ int main(int argc, char *argv[])
 
 
 	/* Install "quit" hook */
+#ifndef USE_WEB
 	quit_aux = quit_hook;
+#endif
 
 
 	/* Drop privs (so X11 will work correctly), unless we are running */
@@ -557,6 +564,18 @@ int main(int argc, char *argv[])
 	safe_setuid_drop();
 #endif
 
+
+#ifdef USE_WEB
+	if (!done)
+	{
+		extern errr init_web(int, char**);
+		if (0 == init_web(argc, argv))
+		{
+			ANGBAND_SYS = "x11";
+			done = TRUE;
+		}
+	}
+#endif
 
 #ifdef USE_XAW
 	/* Attempt to use the "main-xaw.c" support */

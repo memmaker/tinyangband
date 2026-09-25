@@ -1745,6 +1745,137 @@ static void fix_floor(void)
 }
 
 
+/*
+ * Visible monsters, then visible items (known floor objects in line of
+ * sight), in one column.
+ */
+static void fix_visible(void)
+{
+	int j;
+
+	/* Scan windows */
+	for (j = 0; j < 8; j++)
+	{
+		term *old = Term;
+		int w, h, row = 0, i, k, n_mon = 0, n_obj = 0, total = 0;
+		static s16b races[64];
+		static int mcount[64];
+		static char names[64][80];
+		static int ocount[64];
+		static byte colors[64];
+
+		/* No window */
+		if (!angband_term[j]) continue;
+
+		/* No relevant flags */
+		if (!(window_flag[j] & (PW_VISIBLE))) continue;
+
+		/* Activate */
+		Term_activate(angband_term[j]);
+		Term_clear();
+		(void)Term_get_size(&w, &h);
+
+		if (p_ptr->image)
+		{
+			c_prt(TERM_WHITE, "You can not see clearly.", 0, 0);
+			Term_fresh();
+			Term_activate(old);
+			continue;
+		}
+
+		/* Group visible monsters by race */
+		for (i = 1; i < m_max; i++)
+		{
+			monster_type *m_ptr = &m_list[i];
+
+			if (!m_ptr->r_idx || !m_ptr->ml) continue;
+			total++;
+			for (k = 0; k < n_mon; k++) if (races[k] == m_ptr->r_idx) break;
+			if (k < n_mon) { mcount[k]++; continue; }
+			if (n_mon == 64) continue;
+			races[n_mon] = m_ptr->r_idx;
+			mcount[n_mon++] = 1;
+		}
+
+		if (total)
+		{
+			c_prt(TERM_WHITE, format("You can see %d monster%s", total, (total > 1 ? "s:" : ":")), row++, 0);
+
+			for (k = 0; k < n_mon && row < h; k++)
+			{
+				monster_race *r_ptr = &r_info[races[k]];
+				byte attr = TERM_SLATE;
+
+				/* Uniques blue; never-killed green; out-of-depth kills violet/red */
+				if (r_ptr->flags1 & RF1_UNIQUE) attr = TERM_L_BLUE;
+				if (r_ptr->r_tkills)
+				{
+					if (r_ptr->level > dun_level)
+						attr = (r_ptr->flags1 & RF1_UNIQUE) ? TERM_RED : TERM_VIOLET;
+				}
+				else if (!(r_ptr->flags1 & RF1_UNIQUE)) attr = TERM_GREEN;
+
+				if (mcount[k] == 1)
+					c_prt(attr, (r_name + r_ptr->name), row++, 1);
+				else
+					c_prt(attr, format("%s (x%d)", r_name + r_ptr->name, mcount[k]), row++, 1);
+			}
+		}
+		else
+		{
+			c_prt(TERM_WHITE, "You see no monsters.", row++, 0);
+		}
+
+		/* Group visible items by description */
+		for (i = 1; i < o_max; i++)
+		{
+			object_type *o_ptr = &o_list[i];
+			char buf[80];
+
+			if (!o_ptr->k_idx || !o_ptr->marked || !o_ptr->iy) continue;
+			if (!player_has_los_bold(o_ptr->iy, o_ptr->ix)) continue;
+
+			object_desc(buf, o_ptr, 0);
+			for (k = 0; k < n_obj; k++) if (streq(names[k], buf)) break;
+			if (k < n_obj) { ocount[k]++; continue; }
+			if (n_obj == 64) continue;
+			strncpy(names[n_obj], buf, sizeof(names[0]) - 1);
+			names[n_obj][sizeof(names[0]) - 1] = '\0';
+			ocount[n_obj] = 1;
+			colors[n_obj] = tval_to_attr[o_ptr->tval % 128];
+			n_obj++;
+		}
+
+		row++;
+		if (row < h)
+		{
+			if (n_obj)
+				c_prt(TERM_WHITE, format("You can see %d item%s", n_obj, (n_obj > 1 ? "s:" : ":")), row++, 0);
+			else
+				c_prt(TERM_WHITE, "You see no items.", row++, 0);
+		}
+		for (k = 0; k < n_obj; k++)
+		{
+			if (row >= h - 1 && k < n_obj - 1)
+			{
+				c_prt(TERM_SLATE, format("...and %d more", n_obj - k), row, 1);
+				break;
+			}
+			if (ocount[k] > 1)
+				c_prt(colors[k], format("%s (x%d)", names[k], ocount[k]), row++, 1);
+			else
+				c_prt(colors[k], names[k], row++, 1);
+		}
+
+		/* Fresh */
+		Term_fresh();
+
+		/* Restore */
+		Term_activate(old);
+	}
+}
+
+
 
 /*
  * Caluculate exp factor for leveling up
@@ -4294,6 +4425,13 @@ void window_stuff(void)
 	{
 		p_ptr->window &= ~(PW_FLOOR);
 		fix_floor();
+	}
+
+	/* Display visible monsters and items */
+	if (p_ptr->window & (PW_VISIBLE))
+	{
+		p_ptr->window &= ~(PW_VISIBLE);
+		fix_visible();
 	}
 }
 

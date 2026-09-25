@@ -25,7 +25,7 @@
 void safe_setuid_drop(void)
 {
 
-#ifdef SET_UID
+#if defined(SET_UID) && !defined(USE_WEB)
 
 # ifdef SAFE_SETUID
 
@@ -86,7 +86,7 @@ quit("setregid(): 正しく許可が取れません！");
 void safe_setuid_grab(void)
 {
 
-#ifdef SET_UID
+#if defined(SET_UID) && !defined(USE_WEB)
 
 # ifdef SAFE_SETUID
 
@@ -592,6 +592,34 @@ errr process_pref_file_command(char *buf)
 		}
 	}
 
+
+	/* Process "W:<win>:<flag>:<value>" -- window flags */
+	else if (buf[0] == 'W')
+	{
+		int win, flag, value;
+
+		if (tokenize(buf + 2, 3, zz, TOKENIZE_CHECKQUOTE) == 3)
+		{
+			win = strtol(zz[0], NULL, 0);
+			flag = strtol(zz[1], NULL, 0);
+			value = strtol(zz[2], NULL, 0);
+
+			/* Ignore illegal windows, and the main window */
+			if ((win <= 0) || (win >= 8)) return (1);
+
+			/* Ignore illegal flags */
+			if ((flag < 0) || (flag >= 32)) return (1);
+
+			/* Require a real flag */
+			if (window_flag_desc[flag])
+			{
+				if (value) window_flag[win] |= (1L << flag);
+				else window_flag[win] &= ~(1L << flag);
+			}
+
+			return (0);
+		}
+	}
 
 	/* Process "X:<str>" -- turn option off */
 	else if (buf[0] == 'X')

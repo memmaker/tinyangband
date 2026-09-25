@@ -1365,6 +1365,8 @@ typedef struct {
 	int x;
 	int y;
 	int dir;
+	bool explore;   /* auto-explore: retarget on arrival */
+	int stairs;     /* 0, or '<' / '>': take those stairs on arrival */
 } travel_type;
 #endif
 

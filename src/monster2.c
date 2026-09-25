@@ -1370,6 +1370,7 @@ void update_mon(int m_idx, bool full)
 		{
 			/* Mark as visible */
 			m_ptr->ml = TRUE;
+			p_ptr->window |= (PW_VISIBLE);
 
 			/* Draw the monster */
 			lite_spot(fy, fx);
@@ -1403,6 +1404,7 @@ void update_mon(int m_idx, bool full)
 		{
 			/* Mark as not visible */
 			m_ptr->ml = FALSE;
+			p_ptr->window |= (PW_VISIBLE);
 
 			/* Erase the monster */
 			lite_spot(fy, fx);

@@ -4457,6 +4457,23 @@ void forget_travel_flow(void)
 	}
 }
 
+/* Known hazards the pathing should never walk into */
+static bool travel_avoid(int y, int x)
+{
+	cave_type *c_ptr = &cave[y][x];
+	byte feat = c_ptr->feat;
+
+	if ((feat == FEAT_DEEP_LAVA) || (feat == FEAT_SHAL_LAVA)) return TRUE;
+	if ((feat == FEAT_DEEP_WATER) && !p_ptr->ffall) return TRUE;
+
+	/* Known traps */
+	if ((c_ptr->info & CAVE_MARK) &&
+	    (((feat >= FEAT_TRAP_TRAPDOOR) && (feat <= FEAT_TRAP_SLEEP)) ||
+	     (feat == FEAT_TRAP_TRAPS))) return TRUE;
+
+	return FALSE;
+}
+
 static bool travel_flow_aux(int y, int x, int n, bool wall)
 {
 	cave_type *c_ptr = &cave[y][x];
@@ -4473,7 +4490,8 @@ static bool travel_flow_aux(int y, int x, int n, bool wall)
 	/* Ignore "walls" and "rubble" (include "secret doors") */
 	if (((c_ptr->feat >= FEAT_RUBBLE) && (c_ptr->feat <= FEAT_PERM_SOLID)) ||
 		(c_ptr->feat == FEAT_SECRET) ||
-		((!p_ptr->ffall) && (c_ptr->feat == FEAT_DARK_PIT)))
+		((!p_ptr->ffall) && (c_ptr->feat == FEAT_DARK_PIT)) ||
+		travel_avoid(y, x))
 	{
 		if (!wall) return wall;
 	}
@@ -4535,10 +4553,11 @@ static void travel_flow(int ty, int tx)
 	flow_head = flow_tail = 0;
 }
 
+static void travel_start(int y, int x);
+
 void do_cmd_travel(void)
 {
-	int x, y, i;
-	int dx, dy, sx, sy;
+	int x, y;
 
 	if (!tgt_pt(&x, &y)) return;
 
@@ -4562,8 +4581,17 @@ void do_cmd_travel(void)
 		return;
 	}
 
+	travel.explore = FALSE;
+	travel_start(y, x);
+}
+
+static void travel_start(int y, int x)
+{
+	int dx, dy, sx, sy, i;
+
 	travel.x = x;
 	travel.y = y;
+	travel.stairs = 0;
 
 	forget_travel_flow();
 	travel_flow(y, x);
@@ -4584,5 +4612,160 @@ void do_cmd_travel(void)
 	{
 		if ((sx == ddx[i]) && (sy == ddy[i])) travel.dir = i;
 	}
+}
+
+
+/*
+ * Auto-explore: find the nearest reachable grid the player has never
+ * seen (breadth-first over walkable terrain) and travel to it.
+ * Returns FALSE (with a message) when exploring cannot continue.
+ */
+bool explore_next(void)
+{
+	int i, y, x, d, head = 0, tail = 0;
+
+	/* Stop exploring by default */
+	travel.explore = FALSE;
+	travel.run = 0;
+
+	/* ponytail: dungeon only -- the wilderness is effectively endless */
+	if (!dun_level)
+	{
+		msg_print(_("ここは探索できない。", "There is nothing to explore here."));
+		return FALSE;
+	}
+
+	if (p_ptr->confused || p_ptr->blind || p_ptr->image)
+	{
+		msg_print(_("今は探索できない。", "You cannot explore right now."));
+		return FALSE;
+	}
+
+	/* Never walk towards a visible monster */
+	for (i = 1; i < m_max; i++)
+	{
+		monster_type *m_ptr = &m_list[i];
+
+		if (m_ptr->r_idx && m_ptr->ml && projectable(py, px, m_ptr->fy, m_ptr->fx))
+		{
+			msg_print(_("何かがいる。", "Something is here."));
+			return FALSE;
+		}
+	}
+
+	/* Breadth-first search from the player (travel.cost as visited map) */
+	forget_travel_flow();
+	travel.cost[py][px] = 0;
+	temp2_y[head] = py;
+	temp2_x[head++] = px;
+
+	while (tail < head)
+	{
+		y = temp2_y[tail];
+		x = temp2_x[tail++];
+
+		/* Found an unseen grid */
+		if (!(cave[y][x].info & CAVE_SEEN))
+		{
+			travel.explore = TRUE;
+			travel_start(y, x);
+			return TRUE;
+		}
+
+		for (d = 0; d < 8; d++)
+		{
+			int ny = y + ddy_ddd[d];
+			int nx = x + ddx_ddd[d];
+			byte feat;
+
+			if (!in_bounds(ny, nx)) continue;
+			if (travel.cost[ny][nx] != TRAVEL_UNABLE) continue;
+
+			feat = cave[ny][nx].feat;
+
+			/* Walkable: floors, and doors the player knows about */
+			if (!cave_floor_bold(ny, nx) &&
+			    !((feat >= FEAT_DOOR_HEAD) && (feat <= FEAT_DOOR_TAIL) &&
+			      (cave[ny][nx].info & CAVE_MARK))) continue;
+			if (travel_avoid(ny, nx)) continue;
+			if (cave[ny][nx].info & CAVE_NOEXPL) continue;
+
+			travel.cost[ny][nx] = travel.cost[y][x] + 1;
+			if (head >= MAX_SHORT) continue;
+			temp2_y[head] = ny;
+			temp2_x[head++] = nx;
+		}
+	}
+
+	for (y = 0; y < cur_hgt; y++)
+		for (x = 0; x < cur_wid; x++)
+			if (cave[y][x].info & CAVE_NOEXPL) head = -1;
+
+	if (head < 0) msg_print(_("残りは鍵のかかったドアの先だけだ。", "Only locked doors are left to explore."));
+	else msg_print(_("探索できる場所はもうない。", "Nothing left to explore."));
+	return FALSE;
+}
+
+void do_cmd_explore(void)
+{
+	(void)explore_next();
+}
+
+
+/*
+ * '<' / '>': take the stairs here, or travel to the nearest known
+ * (remembered) staircase of that kind and take it on arrival.
+ */
+void do_cmd_stairs(bool up)
+{
+	int y, x, by = 0, bx = 0, best = TRAVEL_UNABLE;
+	byte feat = cave[py][px].feat;
+
+	/* Standing on the right stairs (or a trapdoor): the plain command */
+	if (up ? ((feat == FEAT_LESS) || (feat == FEAT_LESS_LESS) || (feat == FEAT_QUEST_UP))
+	       : ((feat == FEAT_MORE) || (feat == FEAT_MORE_MORE) || (feat == FEAT_QUEST_DOWN) ||
+	          (feat == FEAT_TRAP_TRAPDOOR)))
+	{
+		if (up) do_cmd_go_up();
+		else do_cmd_go_down();
+		return;
+	}
+
+	/* Distances from the player */
+	forget_travel_flow();
+	travel_flow(py, px);
+
+	/* Nearest reachable staircase the player knows about */
+	for (y = 0; y < cur_hgt; y++)
+	{
+		for (x = 0; x < cur_wid; x++)
+		{
+			feat = cave[y][x].feat;
+
+			if (!(cave[y][x].info & CAVE_MARK)) continue;
+			if (up ? !((feat == FEAT_LESS) || (feat == FEAT_LESS_LESS) || (feat == FEAT_QUEST_UP))
+			       : !((feat == FEAT_MORE) || (feat == FEAT_MORE_MORE) || (feat == FEAT_QUEST_DOWN)))
+				continue;
+			if (travel.cost[y][x] >= best) continue;
+
+			best = travel.cost[y][x];
+			by = y;
+			bx = x;
+		}
+	}
+
+	if (best == TRAVEL_UNABLE)
+	{
+		if (up) msg_print(_("上り階段の場所を知らない。", "You know of no way up."));
+		else msg_print(_("下り階段の場所を知らない。", "You know of no way down."));
+		return;
+	}
+
+	travel.explore = FALSE;
+	travel_start(by, bx);
+	travel.stairs = up ? '<' : '>';
+
+	/* Don't give up on long walks */
+	travel.run = MAX_HGT * MAX_WID;
 }
 #endif

@@ -2156,7 +2156,7 @@ static errr CheckEvent(bool wait)
 		/* Move and/or Resize */
 		case ConfigureNotify:
 		{
-			int cols, rows, wid, hgt;
+			int cols, rows;
 
 			int ox = Infowin->ox;
 			int oy = Infowin->oy;
@@ -2182,19 +2182,19 @@ static errr CheckEvent(bool wait)
 				if (rows < 24) rows = 24;
 			}
 
-			/* Desired size of window */
-			wid = cols * td->fnt->wid + (ox + ox);
-			hgt = rows * td->fnt->hgt + (oy + oy);
-
-			/* Resize the Term (if needed) */
-			Term_resize(cols, rows);
-
-			/* Resize the windows if any "change" is needed */
-			if ((Infowin->w != wid) || (Infowin->h != hgt))
+			/*
+			 * Don't snap the window back to a whole number of cells:
+			 * window managers that ignore the resize increments (XQuartz)
+			 * fight the snap during a live drag and the window oscillates.
+			 * The spare pixels just become a margin.
+			 */
+			/* Resize the Term (if needed), and repaint it cleanly */
+			if ((cols != Term->wid) || (rows != Term->hgt))
 			{
-				/* Resize window */
 				Infowin_set(td->win);
-				Infowin_resize(wid, hgt);
+				Infowin_wipe();
+				Term_resize(cols, rows);
+				Term_redraw();
 			}
 
 			break;
@@ -3147,6 +3147,19 @@ errr init_x11(int argc, char *argv[])
 		}
 		else
 		{
+			/* Try the "24x24.bmp" file (same layout as 8x8, sharper) */
+			path_build(filename, sizeof(filename), ANGBAND_DIR_XTRA, "graf/24x24.bmp");
+
+			if (0 == fd_close(fd_open(filename, O_RDONLY)))
+			{
+				use_graphics = TRUE;
+
+				pict_wid = pict_hgt = 24;
+
+				ANGBAND_GRAF = "old";
+			}
+			else
+			{
 			/* Try the "8x8.bmp" file */
 			path_build(filename, sizeof(filename), ANGBAND_DIR_XTRA, "graf/8x8.bmp");
 
@@ -3159,6 +3172,7 @@ errr init_x11(int argc, char *argv[])
 				pict_wid = pict_hgt = 8;
 
 				ANGBAND_GRAF = "old";
+			}
 			}
 		}
 	}

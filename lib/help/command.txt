@@ -80,7 +80,7 @@ Note that some keys cannot be used, depending on your system.
  +  Alter grid                           .  Run                                 
  =  Set options                          >  Go down staircase                   
  ;  Walk (with pickup)                   \  (special - bypass keymap)           
- :  Take notes                           `  (special - escape)                  
+ :  Take notes                           `  Auto-explore                        
  "  Enter a user pref command            /  Identify symbol                     
 
 
@@ -146,7 +146,7 @@ Note that some keys cannot be used, depending on your system.
  .  Stay still (with pickup)            ^Y  (tunnel - north west)
  >  Go down staircase                   ^Z  (special - borg command)
  \  (special - bypass keymap)            |  Check information
- `  (special - escape)                   ~  Check information
+ `  Auto-explore                         ~  Check information
  /  Identify symbol                      ?  Help
 
 -- 

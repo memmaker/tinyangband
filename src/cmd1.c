@@ -3749,6 +3749,26 @@ void travel_step(void)
 	int dir = travel.dir;
 	int old_run = travel.run;
 
+	/* Arrived at the stairs we were heading for: take them */
+	if (travel.stairs && (py == travel.y) && (px == travel.x))
+	{
+		bool up = (travel.stairs == '<');
+
+		travel.stairs = 0;
+		travel.run = 0;
+		if (up) do_cmd_go_up();
+		else do_cmd_go_down();
+		return;
+	}
+
+	/* Auto-explore: pick a new target once the current one has been seen */
+	if (travel.explore && (cave[travel.y][travel.x].info & CAVE_SEEN))
+	{
+		if (!explore_next()) return;
+		dir = travel.dir;
+		old_run = travel.run;
+	}
+
 	find_prevdir = dir;
 
 	/* disturb */
@@ -3777,12 +3797,27 @@ void travel_step(void)
 		return;
 	}
 
+	/* Auto-explore never picks locks: stop, and skip this door next time */
+	if (travel.explore)
+	{
+		cave_type *c_ptr = &cave[py+ddy[dir]][px+ddx[dir]];
+
+		if ((c_ptr->feat > FEAT_DOOR_HEAD) && (c_ptr->feat <= FEAT_DOOR_TAIL))
+		{
+			c_ptr->info |= CAVE_NOEXPL;
+			energy_use = 0;
+			msg_print(_("鍵のかかったドアの前で止まった。", "You stop at a locked door."));
+			disturb(0, 0);
+			return;
+		}
+	}
+
 	travel.dir = dir;
 	move_player(dir, FALSE);
 	travel.run = old_run;
 
 	if ((py == travel.y) && (px == travel.x))
-		travel.run = 0;
+		travel.run = (travel.explore || travel.stairs) ? 1 : 0;
 	else
 		travel.run--;
 }

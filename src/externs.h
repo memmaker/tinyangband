@@ -568,6 +568,9 @@ extern int do_cmd_fire_aux(int item, object_type *j_ptr);
 extern void do_cmd_throw(int mult);
 #ifdef TRAVEL
 extern void do_cmd_travel(void);
+extern void do_cmd_explore(void);
+extern void do_cmd_stairs(bool up);
+extern bool explore_next(void);
 #endif
 
 /* cmd3.c */
