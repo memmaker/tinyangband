@@ -26,7 +26,7 @@ emcc -O2 -fcommon -std=gnu99 -DHAVE_CONFIG_H -DUSE_WEB -Isrc -w \
 	-sFORCE_FILESYSTEM -lidbfs.js -sENVIRONMENT=web \
 	--preload-file web/stage/lib@/tinyangband/lib
 
-cp web/index.html web/tinyangband.js "$OUT/"
+cp web/index.html web/rvip-wm.js web/tinyangband.js "$OUT/"
 # Sounds and town music: TinyAngband ships none; same event names as Quickband's set
 cp -R ../quickband/lib/xtra/sound "$OUT/sound"
 mkdir -p "$OUT/music" && cp ../quickband/web/music/new_town.ogg "$OUT/music/"

@@ -18,7 +18,7 @@
 
 #include <emscripten.h>
 
-#define WEB_TERMS 5
+#define WEB_TERMS 6		/* term 5: equipment (RVIP 5b) */
 
 static term web_term[WEB_TERMS];
 
