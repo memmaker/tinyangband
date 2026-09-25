@@ -2371,10 +2371,10 @@ option_type option_info[] =
 #endif
 
 #ifdef JP
-	{ &auto_more,                   FALSE, 1, 2, 4,
+	{ &auto_more,                   TRUE, 1, 2, 4,
 	"auto_more",                    "キー待ちしないで連続でメッセージを表示する" },
 #else
-	{ &auto_more,                   FALSE, 1, 2, 4,
+	{ &auto_more,                   TRUE, 1, 2, 4,
 	"auto_more",                    "Automatically clear '-more-' prompts" },
 #endif
 
