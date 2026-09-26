@@ -10,6 +10,7 @@ rm -rf "$OUT" web/stage && mkdir -p "$OUT" web/stage/lib
 for d in edit file help pref; do cp -R lib/$d web/stage/lib/; done
 mkdir -p web/stage/lib/data web/stage/lib/script web/stage/lib/info web/stage/lib/save web/stage/lib/user web/stage/lib/apex web/stage/lib/bone
 find web/stage -name 'Makefile*' -delete
+mkdir -p web/stage/lib/xtra/sound && cp ../quickband/lib/xtra/sound/sound.cfg web/stage/lib/xtra/sound/
 # 16x16.bmp keyed on its "black" pixel -> PNG with alpha (drawn by the page)
 python3 web/bmp2png.py lib/xtra/graf/16x16.bmp "$OUT/16x16.png"
 
