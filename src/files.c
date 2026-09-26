@@ -5239,25 +5239,22 @@ void get_character_name(void)
 {
 	char tmp[16];
 
-	/* Save the player name */
-	strcpy(tmp, player_name);
+	/* Ask until a name is given (the prompt starts empty) */
+	do
+	{
+		tmp[0] = '\0';
 
-	/* Prompt for a new name */
+		/* Prompt for a new name */
 #ifdef JP
-	if (get_string("キャラクタの名前を入力して下さい:", tmp, 15))
+		if (!get_string("キャラクタの名前を入力して下さい:", tmp, 15)) tmp[0] = '\0';
 #else
-	if (get_string("Enter a name for your character: ", tmp, 15))
+		if (!get_string("Enter a name for your character: ", tmp, 15)) tmp[0] = '\0';
 #endif
-	{
-		/* Use the name */
-		strcpy(player_name, tmp);
 	}
+	while (!tmp[0]);
 
-	if (0 == strlen(player_name))
-	{
-		/* Use default name */
-		strcpy(player_name, "PLAYER");
-	}
+	/* Use the name */
+	strcpy(player_name, tmp);
 
 	/* Process the player name */
 	process_player_name(FALSE);
