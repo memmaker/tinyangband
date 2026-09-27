@@ -4714,7 +4714,7 @@ void do_cmd_explore(void)
 
 /*
  * '<' / '>': take the stairs here, or travel to the nearest known
- * (remembered) staircase of that kind and take it on arrival.
+ * (remembered) staircase of that kind (press the key again to take it).
  */
 void do_cmd_stairs(bool up)
 {

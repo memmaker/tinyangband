@@ -3749,15 +3749,11 @@ void travel_step(void)
 	int dir = travel.dir;
 	int old_run = travel.run;
 
-	/* Arrived at the stairs we were heading for: take them */
+	/* Arrived at the stairs we were heading for: stop; the player presses the key again */
 	if (travel.stairs && (py == travel.y) && (px == travel.x))
 	{
-		bool up = (travel.stairs == '<');
-
 		travel.stairs = 0;
 		travel.run = 0;
-		if (up) do_cmd_go_up();
-		else do_cmd_go_down();
 		return;
 	}
 
