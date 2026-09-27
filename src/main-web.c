@@ -103,6 +103,15 @@ EM_JS(int, js_next_event, (int at_cmd), {
 });
 
 
+/* The page's Tiles button: 1 tiles, 0 text; -1 no change (asked at the prompt) */
+EM_JS(int, js_tiles_wanted, (void), {
+	return Module.qb.tilesWanted();
+});
+
+EM_JS(int, js_tiles_switch, (void), {
+	return Module.qb.tilesSwitch();
+});
+
 EM_JS(void, js_quit, (const char *msg), {
 	Module.qb.quit(msg ? UTF8ToString(msg) : "");
 });
@@ -174,6 +183,24 @@ static void web_apply_layout(void)
 }
 
 
+/* Tiles (16x16 big tiles) or plain text on the map */
+static void web_graphics(int on)
+{
+	use_graphics = arg_graphics = on ? TRUE : FALSE;
+	use_transparency = on ? TRUE : FALSE;
+	use_bigtile = arg_bigtile = on ? TRUE : FALSE;
+}
+
+/* The page's Tiles button, applied at the command prompt */
+static void web_switch_graphics(int on)
+{
+	web_graphics(on);
+	reset_visuals();
+	resize_map();
+	do_cmd_redraw();
+}
+
+
 /* Move queued browser input into the main term's key queue */
 static int web_pump(void)
 {
@@ -189,6 +216,18 @@ static int web_pump(void)
 		/* No mouse support in this variant */
 		if (k != 0x10000) Term_keypress(k);
 		got = 1;
+	}
+
+	/* Tiles <-> text: only while waiting for a command */
+	if (inkey_flag && character_generated && !got)
+	{
+		int on = js_tiles_switch();
+
+		if ((on >= 0) && (on != (use_graphics ? 1 : 0)))
+		{
+			web_switch_graphics(on);
+			got = 1;
+		}
 	}
 
 	/* Safe autosave: only while waiting for a command */
@@ -275,14 +314,27 @@ static errr Term_xtra_web(int n, int v)
 	return (1);
 }
 
+/* No cursor box on the hero (the "hilite_player" cursor) */
+static bool web_on_hero(int x, int y)
+{
+	int hx;
+
+	if (web_idx() || !character_dungeon) return FALSE;
+	hx = px - panel_col_min;
+	if (use_bigtile) hx *= 2;
+	return (y == py - panel_row_prt) && (x == hx + 13);
+}
+
 static errr Term_curs_web(int x, int y)
 {
+	if (web_on_hero(x, y)) return (0);
 	js_curs(web_idx(), x, y, 1);
 	return (0);
 }
 
 static errr Term_bigcurs_web(int x, int y)
 {
+	if (web_on_hero(x, y)) return (0);
 	js_curs(web_idx(), x, y, 2);
 	return (0);
 }
@@ -359,11 +411,8 @@ errr init_web(int argc, char **argv)
 	(void)argc;
 	(void)argv;
 
-	/* 16x16 tiles in big-tile mode, as in the X11 build (-g -b) */
-	use_graphics = TRUE;
-	arg_graphics = TRUE;
-	use_transparency = TRUE;
-	use_bigtile = arg_bigtile = TRUE;
+	/* 16x16 tiles in big-tile mode, as in the X11 build (-g -b), or text */
+	web_graphics(js_tiles_wanted() != 0);
 	ANGBAND_GRAF = "new";
 
 	/*

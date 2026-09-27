@@ -113,6 +113,7 @@
 				});
 				if (s.audio) d.audio = { sound: s.audio.sound === true, music: s.audio.music === true };
 				if (s.wm) d.wm = s.wm;
+				if (s.tiles === false) d.tiles = false;
 				if (s.titles) Object.keys(s.titles).forEach(function (k) {
 					if (typeof s.titles[k] === 'string' && d.font[k]) d.titles[k] = s.titles[k].slice(0, 60);
 				});
@@ -232,6 +233,7 @@
 
 	function buildTerms() {
 		loadLayout();
+		renderTiles();
 		makeWM();
 		TERMS.forEach(function (d, i) {
 			var l = termShape(i);
@@ -294,7 +296,7 @@
 	}
 
 	function resetLayout() {
-		L = Object.assign(defaultLayout(), { audio: L.audio, wm: wm.state() });
+		L = Object.assign(defaultLayout(), { audio: L.audio, wm: wm.state(), tiles: L.tiles });
 		scheduleLayout();
 		saveLayout();
 	}
@@ -389,7 +391,25 @@
 		$('chk-music').checked = audio.music;
 	}
 
+	/* Tiles button: 16x16 tiles <-> None (text).  The game switches its
+	 * graphics mode at the next command prompt (tilesSwitch). */
+	var tilesSwitch = -1;
+	function toggleTiles() {
+		if (!L || !tilesReady) return;
+		if (L.tiles === false) delete L.tiles; else L.tiles = false;
+		saveLayout();
+		renderTiles();
+		if (running) tilesSwitch = L.tiles === false ? 0 : 1;
+	}
+	function renderTiles() {
+		$('btn-tiles').textContent = 'Tiles: ' + (tilesReady && !(L && L.tiles === false) ? '16x16' : 'None');
+	}
+
 	var qb = {
+		/* Asked once by init_web(), then at every command prompt */
+		tilesWanted: function () { return (tilesReady && L.tiles !== false) ? 1 : 0; },
+		tilesSwitch: function () { var v = tilesSwitch; tilesSwitch = -1; return v; },
+
 		sound: function (name) {
 			if (!audio.cfg) loadSoundCfg();
 			var files = audio.sound && audio.cfg[name];
@@ -778,10 +798,13 @@
 	/* Tile sheet; main() waits for it */
 	var tilesDone = false, tilesWait = false;
 	function tilesFinished(ok) {
+		/* Once the game runs, a late sheet can't turn tiles back on */
+		if (running && !tilesReady) ok = false;
 		tilesReady = ok;
 		tilesDone = true;
 		if (!ok) status('Could not load the tile set; using text.', true);
 		if (tilesWait) Module.removeRunDependency('tiles');
+		if (L) renderTiles();
 	}
 	tiles.onload = function () { tilesFinished(true); };
 	tiles.onerror = function () { tilesFinished(false); };
@@ -796,6 +819,7 @@
 		$('import-file').onchange = function () { if (this.files[0]) importSave(this.files[0]); this.value = ''; };
 		$('btn-new').onclick = newGame;
 		$('btn-help').onclick = toggleHelp;
+		$('btn-tiles').onclick = toggleTiles;
 		$('help-close').onclick = toggleHelp;
 		RvipWM.dropdown($('btn-file'), $('file-menu'));
 		RvipWM.dropdown($('btn-audio'), $('audio-menu'));
