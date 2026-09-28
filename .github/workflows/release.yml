@@ -21,7 +21,7 @@ jobs:
           - os: linux
             runs-on: ubuntu-latest
             deps: sudo apt-get update && sudo apt-get install -y libncurses-dev automake autoconf
-            build: sh bootstrap && sh ./configure --without-x --disable-sdl_mixer CFLAGS="-O2 -w -fcommon" && make && cp src/tinyangband .
+            build: sh bootstrap && sh ./configure --without-x --disable-sdl_mixer CFLAGS="-O2 -w -fcommon" LIBS="$([ $(uname) = Darwin ] && echo -liconv)" && make && cp src/tinyangband .
           - os: windows
             runs-on: ubuntu-latest
             deps: sudo apt-get update && sudo apt-get install -y gcc-mingw-w64-x86-64 automake autoconf
@@ -29,7 +29,7 @@ jobs:
           - os: macos
             runs-on: macos-latest
             deps: brew install automake autoconf
-            build: sh bootstrap && sh ./configure --without-x --disable-sdl_mixer CFLAGS="-O2 -w -fcommon" && make && cp src/tinyangband . 
+            build: sh bootstrap && sh ./configure --without-x --disable-sdl_mixer CFLAGS="-O2 -w -fcommon" LIBS="$([ $(uname) = Darwin ] && echo -liconv)" && make && cp src/tinyangband . 
     runs-on: ${{ matrix.runs-on }}
     steps:
       - uses: actions/checkout@v4
