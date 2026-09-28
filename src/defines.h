@@ -714,6 +714,10 @@
 #define COL_INFO                0       /* "xxxxxxxxxxxx" */
 
 #define ROW_MAP						0
+
+/* Cells per grid on the main map: big tiles are 2 x 1, times the web map zoom */
+#define MAP_VM	(use_bigtile ? tile_mult : 1)
+#define MAP_HM	(use_bigtile ? 2 * tile_mult : 1)
 #define COL_MAP                  12
 
 #define ROW_CUT                 19

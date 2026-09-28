@@ -159,6 +159,7 @@ extern bool wizard;
 extern bool use_sound;
 extern bool use_graphics;
 extern bool use_bigtile;
+extern int tile_mult;
 extern u16b total_winner;
 extern u16b panic_save;
 extern u16b noscore;

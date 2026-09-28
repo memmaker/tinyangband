@@ -48,8 +48,8 @@ EM_JS(void, js_curs, (int t, int x, int y, int w), {
 });
 
 EM_JS(void, js_pict, (int t, int x, int y, int n, const byte *ap, const char *cp,
-                      const byte *tap, const char *tcp), {
-	Module.qb.pict(t, x, y, n, ap, cp, tap, tcp);
+                      const byte *tap, const char *tcp, int m), {
+	Module.qb.pict(t, x, y, n, ap, cp, tap, tcp, m);
 });
 
 EM_JS(void, js_fresh, (int t), {
@@ -106,6 +106,10 @@ EM_JS(int, js_next_event, (int at_cmd), {
 /* The page's Tiles button: 1 tiles, 0 text; -1 no change (asked at the prompt) */
 EM_JS(int, js_tiles_wanted, (void), {
 	return Module.qb.tilesWanted();
+});
+
+EM_JS(int, js_tile_mult, (void), {
+	return Module.qb.tileMult();
 });
 
 EM_JS(int, js_tiles_switch, (void), {
@@ -228,6 +232,12 @@ static int web_pump(void)
 			web_switch_graphics(on);
 			got = 1;
 		}
+		else if (js_tile_mult() != tile_mult)
+		{
+			tile_mult = js_tile_mult();
+			if (use_bigtile) resize_map(), do_cmd_redraw();
+			got = 1;
+		}
 	}
 
 	/* Safe autosave: only while waiting for a command */
@@ -321,8 +331,8 @@ static bool web_on_hero(int x, int y)
 
 	if (web_idx() || !character_dungeon) return FALSE;
 	hx = px - panel_col_min;
-	if (use_bigtile) hx *= 2;
-	return (y == py - panel_row_prt) && (x == hx + 13);
+	hx *= MAP_HM;
+	return (y == (py - panel_row_prt - 1) * MAP_VM + 1) && (x == hx + 13);
 }
 
 static errr Term_curs_web(int x, int y)
@@ -354,7 +364,14 @@ static errr Term_text_web(int x, int y, int n, byte a, cptr s)
 static errr Term_pict_web(int x, int y, int n, const byte *ap, const char *cp,
                           const byte *tap, const char *tcp)
 {
-	js_pict(web_idx(), x, y, n, ap, cp, tap, tcp);
+	int m = 1;
+
+	/* A map grid (filler cells below it): drawn over 2m x m cells */
+	if (use_bigtile && (tile_mult > 1) && (y + 1 < Term->hgt) &&
+	    (Term->scr->a[y + 1][x] == 0xF0) && (Term->scr->c[y + 1][x] == -1))
+		m = tile_mult;
+
+	js_pict(web_idx(), x, y, n, ap, cp, tap, tcp, m);
 	return (0);
 }
 
@@ -412,6 +429,7 @@ errr init_web(int argc, char **argv)
 	(void)argv;
 
 	/* 16x16 tiles in big-tile mode, as in the X11 build (-g -b), or text */
+	tile_mult = js_tile_mult();
 	web_graphics(js_tiles_wanted() != 0);
 	ANGBAND_GRAF = "new";
 

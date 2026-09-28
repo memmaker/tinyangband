@@ -625,6 +625,17 @@ void Term_queue_bigchar(int x, int y, byte a, char c, byte ta, char tc)
 	/* Display pair of attr/char */
 	Term_queue_char(x, y, a, c, ta, tc);
 	Term_queue_char(x + 1, y, a2, c2, 0, 0);
+
+	/* Web map zoom: a tile covers 2m x m cells, the rest are fillers */
+	if ((a2 == AF_BIGTILE2) && (tile_mult > 1))
+	{
+		int dx, dy;
+
+		for (dy = 0; dy < tile_mult; dy++)
+			for (dx = dy ? 0 : 2; dx < 2 * tile_mult; dx++)
+				if ((x + dx < Term->wid) && (y + dy < Term->hgt))
+					Term_queue_char(x + dx, y + dy, AF_BIGTILE2, -1, 0, 0);
+	}
 }
 
 

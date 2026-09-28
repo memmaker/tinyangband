@@ -1277,8 +1277,16 @@ void map_info(int y, int x, byte *ap, char *cp, byte *tap, char *tcp)
 static int panel_col_of(int col)
 {
 	col -= panel_col_min;
-	if (use_bigtile) col *= 2;
+	col *= MAP_HM;
 	return col + 13; 
+}
+
+/*
+ * Calculate panel row of a location in the map (MAP_VM rows per grid)
+ */
+static int panel_row_of(int row)
+{
+	return (row - panel_row_prt - 1) * MAP_VM + 1;
 }
 
 
@@ -1288,7 +1296,7 @@ static int panel_col_of(int col)
 void move_cursor_relative(int row, int col)
 {
 	/* Real co-ords convert to screen positions */
-	row -= panel_row_prt;
+	row = panel_row_of(row);
 
 	/* Go there */
 	Term_gotoxy(panel_col_of(col), row);
@@ -1312,7 +1320,7 @@ void print_rel(char c, byte a, int y, int x)
 		}
 
 		/* Draw the char using the attr */
-		Term_queue_bigchar(panel_col_of(x), y-panel_row_prt, a, c, 0, 0);
+		Term_queue_bigchar(panel_col_of(x), panel_row_of(y), a, c, 0, 0);
 	}
 }
 
@@ -1527,7 +1535,7 @@ void lite_spot(int y, int x)
 		}
 
 		/* Hack -- Queue it */
-		Term_queue_bigchar(panel_col_of(x), y-panel_row_prt, a, c, ta, tc);
+		Term_queue_bigchar(panel_col_of(x), panel_row_of(y), a, c, ta, tc);
 
 		/* Hack -- Request to redraw entire sub-map before player-turn*/
 		p_ptr->window |= (PW_OVERHEAD | PW_DUNGEON);
@@ -1574,14 +1582,14 @@ void prt_map(void)
 	ymax = (cur_hgt - 1 > panel_row_max) ? panel_row_max : cur_hgt - 1;
 
 	/* Bottom section of screen */
-	for (y = 1; y <= ymin - panel_row_prt; y++)
+	for (y = 1; y <= panel_row_of(ymin); y++)
 	{
 		/* Erase the section */
 		Term_erase(COL_MAP, y, wid);
 	}
 
 	/* Top section of screen */
-	for (y = ymax - panel_row_prt; y <= hgt; y++)
+	for (y = panel_row_of(ymax); y <= hgt; y++)
 	{
 		/* Erase the section */
 		Term_erase(COL_MAP, y, wid);
@@ -1610,7 +1618,7 @@ void prt_map(void)
 			}
 
 			/* Efficiency -- Redraw that grid of the map */
-			Term_queue_bigchar(panel_col_of(x), y-panel_row_prt, a, c, ta, tc);
+			Term_queue_bigchar(panel_col_of(x), panel_row_of(y), a, c, ta, tc);
 		}
 	}
 
@@ -1685,7 +1693,7 @@ void prt_path(int y, int x)
 			c = '*';
 
 			/* Hack -- Queue it */
-			Term_queue_bigchar(panel_col_of(nx), ny-panel_row_prt, a, c, ta, tc);
+			Term_queue_bigchar(panel_col_of(nx), panel_row_of(ny), a, c, ta, tc);
 		}
 
 		/* Known Wall */

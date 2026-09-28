@@ -146,6 +146,7 @@ bool wizard;			/* Is the player currently in Wizard mode? */
 bool use_sound;			/* The "sound" mode is enabled */
 bool use_graphics;		/* The "graphics" mode is enabled */
 bool use_bigtile = FALSE;
+int tile_mult = 1;	/* web map zoom: a big tile is 2m x m cells */
 
 u16b total_winner;		/* Semi-Hack -- Game has been won */
 
