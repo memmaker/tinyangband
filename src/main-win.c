@@ -75,7 +75,7 @@
 #include "angband.h"
 #include <windows.h>
 #ifdef USE_SOUND
-#include <MMSystem.h>
+#include <mmsystem.h>
 #endif
 
 
@@ -2047,7 +2047,7 @@ static void term_window_pos(term_data *td, HWND hWnd)
 }
 
 
-extern void windows_map_aux(void);
+static void windows_map_aux(void);
 
 
 /*
